@@ -1093,6 +1093,11 @@
   </style>
 </head>
 <body>
+  <!-- Separate script for immediate execution checking -->
+  <script>
+    console.log('Sanity Check: JS is running');
+  </script>
+
   <div class="bg-effects">
     <div class="bg-grid"></div>
     <div class="bg-glow bg-glow-1"></div>
@@ -1323,13 +1328,11 @@
   </div>
 
   <script>
-    // IMMEDIATE ERROR CATCHER (Requested)
-    console.log('=== SCRIPT STARTED ===');
-    window.addEventListener('error', (e) => {
-      console.error('RUNTIME ERROR:', e.error);
-      // alert is annoying if it triggers on minor things, but requested for debugging.
-      // I will keep the console.error primarily as user said "No Visible Error Feedback" is a critical issue.
-    });
+    // Global error handler
+    window.onerror = function(msg, url, line, col, error) {
+      console.error('Global Error:', msg, 'at', url, ':', line, ':', col, 'Error object:', error);
+      // alert('Critical Error: ' + msg); // Uncomment for debugging
+    };
 
     document.addEventListener('DOMContentLoaded', () => {
       try {
