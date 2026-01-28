@@ -2436,6 +2436,15 @@ Remember: Return ONLY pure HTML. No markdown formatting, no code blocks, no back
               { label: 'H1 Tags', path: 'seo.headings.h1.count' },
               { label: 'Images', path: 'seo.images.total' },
               { label: 'On-Page Links', path: 'seo.links.totalCount' },
+              { 
+                label: 'Top Keywords', 
+                path: 'seo.content.topKeywords',
+                formatter: (val) => {
+                  if (!Array.isArray(val) || val.length === 0) return '<span style="color:var(--text-muted)">-</span>';
+                  // Return top 3 keywords as simple text
+                  return `<span style="font-size:11px; color:var(--text-secondary)">${val.slice(0, 3).map(k => k.word).join(', ')}</span>`;
+                }
+              }
             ];
 
             let html = `
@@ -2454,23 +2463,78 @@ Remember: Return ONLY pure HTML. No markdown formatting, no code blocks, no back
             `;
 
             metrics.forEach(m => {
-              const mainVal = getVal(APP.data, m.path) ?? '-';
-              const mainColor = m.isScore ? getScoreColor(mainVal) : 'inherit';
+              let mainRaw = getVal(APP.data, m.path);
+              let mainVal = mainRaw ?? '-';
+              
+              if (m.formatter) {
+                mainVal = m.formatter(mainRaw);
+              }
+              
+              const mainColor = m.isScore ? getScoreColor(mainRaw) : 'inherit';
               
               html += `<tr>
-                <td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 13px; font-weight: 600;">${m.label}</td>
-                <td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: ${mainColor}">${mainVal}</td>`;
+                <td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); color: var(--text-muted); font-size: 13px; font-weight: 600; vertical-align: middle;">${m.label}</td>
+                <td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); font-family: 'IBM Plex Mono', monospace; font-weight: 700; color: ${mainColor}; vertical-align: middle;">${mainVal}</td>`;
                 
               APP.competitorData.forEach(d => {
-                const val = getVal(d, m.path) ?? '-';
-                const color = m.isScore ? getScoreColor(val) : 'inherit';
-                html += `<td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); font-family: 'IBM Plex Mono', monospace; color: ${color}">${val}</td>`;
+                let raw = getVal(d, m.path);
+                let val = raw ?? '-';
+                
+                if (m.formatter) {
+                  val = m.formatter(raw);
+                }
+                
+                const color = m.isScore ? getScoreColor(raw) : 'inherit';
+                html += `<td style="padding: 16px; border-bottom: 1px solid var(--border-subtle); font-family: 'IBM Plex Mono', monospace; color: ${color}; vertical-align: middle;">${val}</td>`;
               });
               
               html += `</tr>`;
             });
 
             html += `</tbody></table></div></div>`;
+
+            // Keyword Gap Analysis Section
+            html += `
+              <div class="analysis-card" style="margin-top: 24px;">
+                <div class="card-header"><div class="card-title">🔑 Keyword Gap Analysis</div></div>
+                <div class="card-body">
+                  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
+                    <!-- User Site -->
+                    <div style="background: var(--bg-tertiary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-accent);">
+                      <h5 style="margin-bottom:12px; font-size:14px; color:var(--accent-cyan); display:flex; align-items:center; gap:8px;">
+                        <img src="https://www.google.com/s2/favicons?domain=${APP.data.seo.domain}" style="width:16px; height:16px; border-radius:2px;">
+                        ${window.getDomain(APP.url)} (You)
+                      </h5>
+                      <div class="keywords-cloud">
+                        ${(getVal(APP.data, 'seo.content.topKeywords') || []).slice(0, 15).map(k => 
+                          `<span class="keyword-tag primary" style="font-size:11px;">${k.word} <small style="opacity:0.6">${k.count}</small></span>`
+                        ).join('') || '<span style="color:var(--text-muted); font-size:12px;">No keywords found</span>'}
+                      </div>
+                    </div>
+
+                    <!-- Competitors -->
+                    ${APP.competitors.map((url, i) => {
+                      const data = APP.competitorData[i];
+                      const keywords = getVal(data, 'seo.content.topKeywords') || [];
+                      return `
+                        <div style="background: var(--bg-tertiary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-subtle);">
+                          <h5 style="margin-bottom:12px; font-size:14px; color:var(--text-primary); display:flex; align-items:center; gap:8px;">
+                            <img src="https://www.google.com/s2/favicons?domain=${window.getDomain(url)}" style="width:16px; height:16px; border-radius:2px;">
+                            ${window.getDomain(url)}
+                          </h5>
+                          <div class="keywords-cloud">
+                            ${keywords.slice(0, 15).map(k => 
+                              `<span class="keyword-tag" style="font-size:11px;">${k.word} <small style="opacity:0.6">${k.count}</small></span>`
+                            ).join('') || '<span style="color:var(--text-muted); font-size:12px;">No keywords found</span>'}
+                          </div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
+            `;
+
             container.innerHTML = html;
           }
 
